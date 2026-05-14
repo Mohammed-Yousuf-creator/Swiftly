@@ -1,17 +1,19 @@
+from fastapi import Depends
 from sqlalchemy.exc import IntegrityError
 from starlette import status
 from fastapi import APIRouter , HTTPException
 from pydantic import BaseModel
 from Backend.models import Customer, Seller, UserRole , User
-from passlib.context import CryptContext
-from  Backend.Routers.dependency import db_dependency
+from Backend.Routers.dependencies.db_dependencies import db_dependency
+from fastapi.security import OAuth2PasswordRequestForm
+from typing import Annotated
+from datetime import timedelta
+from Backend.Routers.dependencies.security import create_access_token, bcrypt_context, authenticate_user
 
 router = APIRouter(
     prefix='/auth',
     tags = ['auth']
 )
-
-bcrypt_context = CryptContext(schemes=['bcrypt'] , deprecated = 'auto')
 
 class CreateNewUser(BaseModel):
     username : str
@@ -30,6 +32,9 @@ class CreateSellerRequest(BaseModel):
     Bio : str
     address : str
 
+class Token(BaseModel):
+    access_token : str
+    token_type : str
 
 @router.post("/CustomerResgistration" , status_code= status.HTTP_201_CREATED)
 async def customer_registration(new_user : CreateNewUser ,
@@ -72,7 +77,7 @@ async def create_new_seller(new_user: CreateNewUser,
     try:
         create_user = User(
         username= new_user.username,
-        user_role= UserRole.CUSTOMER,
+        user_role= UserRole.SELLER,
         phone_number=new_user.phone_number,
         email=new_user.email,
         hashed_password = bcrypt_context.hash(new_user.password)
@@ -81,6 +86,7 @@ async def create_new_seller(new_user: CreateNewUser,
         db.flush()
 
         create_seller = Seller(
+            user_id=create_user.user_id,
             first_name=new_seller.first_name,
             last_name=new_seller.last_name,
             address=new_seller.address,
@@ -89,6 +95,8 @@ async def create_new_seller(new_user: CreateNewUser,
 
         db.add(create_seller)
         db.commit()
+        return {"message" : " Seller successfully registered" , "Username" : create_user.username}
+
 
     except IntegrityError:
         db.rollback()
@@ -99,3 +107,13 @@ async def create_new_seller(new_user: CreateNewUser,
         print("Something went wrong!")
         raise e
 
+
+@router.post("/token" , response_model=Token)
+async def login_access_token(form_data : Annotated[OAuth2PasswordRequestForm , Depends()] , db : db_dependency):
+    user = authenticate_user(form_data.username , form_data.password , db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED , detail='username or password incorrect')
+
+    token = create_access_token(user.user_id , user.username , user.user_role , timedelta(minutes=30))
+
+    return {'access_token' : token , 'token_type' : 'bearer'}

@@ -6,7 +6,8 @@ ENV/
 env/
 
 .env
-db.env
+db_key.env
+secret.env
 *.env
 
 .idea/

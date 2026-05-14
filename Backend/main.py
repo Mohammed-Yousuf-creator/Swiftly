@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from Backend.Routers import auth , seller , customer , admin
-from Backend.database import Base, engine
+
 
 app = FastAPI()
 
