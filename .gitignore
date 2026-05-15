@@ -1,2 +1,16 @@
 .venv/
 .github/
+
+
+.venv/
+venv/
+ENV/
+env/
+
+.env
+db_key.env
+secret.env
+*.env
+
+.idea/
+alembic.ini

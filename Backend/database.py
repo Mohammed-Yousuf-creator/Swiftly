@@ -3,11 +3,15 @@ from sqlalchemy.orm import DeclarativeBase , sessionmaker
 import os
 from dotenv import load_dotenv
 
-load_dotenv('db.env')
 
-Database_url_link = os.getenv("Database_url_link")
+load_dotenv('db_key.env')
 
-engine = create_engine(Database_url_link,connect_args= {'check same Thread' : False})
+Database_url_link = os.getenv('DATABASE_URL_LINK')
+
+if not Database_url_link:
+    raise ValueError("Database URL is missing! Check your secret.env file.")
+
+engine = create_engine(Database_url_link)
 
 Session_local = sessionmaker(autoflush= False , autocommit = False , bind=engine)
 
